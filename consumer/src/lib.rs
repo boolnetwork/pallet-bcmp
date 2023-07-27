@@ -9,7 +9,7 @@ pub mod pallet {
     use sp_core::H256;
     use frame_support::traits::{Currency, LockableCurrency};
     use frame_system::pallet_prelude::*;
-    use pallet_bridge::{CrossType, MessageReceived, MessageSent};
+    use pallet_bridge::{CrossType, Message};
 
     pub type BalanceOf<T> =
     <<T as pallet_bridge::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -71,11 +71,11 @@ pub mod pallet {
     }
 
     impl<T: Config> pallet_bridge::ConsumerInterface<T> for Pallet<T> {
-        fn send_op(_message: &MessageSent) -> DispatchResultWithPostInfo {
+        fn send_op(_message: &Message) -> DispatchResultWithPostInfo {
             Ok(().into())
         }
 
-        fn receive_op(_message: &MessageReceived) -> DispatchResultWithPostInfo {
+        fn receive_op(_message: &Message) -> DispatchResultWithPostInfo {
             Ok(().into())
         }
     }

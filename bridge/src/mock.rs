@@ -12,7 +12,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 pub use pallet_bridge::Event as bridge_event;
-use crate::{MessageReceived, MessageSent};
+use crate::Message;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -77,11 +77,11 @@ parameter_types! {
 }
 
 impl crate::ConsumerInterface<Test> for () {
-    fn send_op(_message: &MessageSent) -> DispatchResultWithPostInfo {
+    fn send_op(_message: &Message) -> DispatchResultWithPostInfo {
         Ok(().into())
     }
 
-    fn receive_op(_message: &MessageReceived) -> DispatchResultWithPostInfo {
+    fn receive_op(_message: &Message) -> DispatchResultWithPostInfo {
         Ok(().into())
     }
 }

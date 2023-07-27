@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use frame_support::{assert_noop, assert_ok};
-use crate::{AnchorAddrToInfo, AnchorInfo, CrossType, DstChainToNonce, Error, MessageReceived, MessageSent};
+use crate::{AnchorAddrToInfo, AnchorInfo, CrossType, DstChainToNonce, Error, Message};
 use crate::mock::*;
 use sp_core::{H256, Pair};
 use codec::Encode;
@@ -116,7 +116,7 @@ fn test_send_message() {
             vec![],
             vec![],
         ));
-        let message = MessageSent {
+        let message = Message {
             uid: H256::from_str("00007A6A00007A69000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
@@ -141,7 +141,7 @@ fn test_receive_message() {
         let pk = cmt_pair.public().0.to_vec();
         let dst_anchor: H256 = sp_io::hashing::sha2_256(&pk).into();
         let src_anchor = H256::random();
-        let message = MessageSent {
+        let message = Message {
             uid: H256::from_str("00007A6900007A6A000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
@@ -198,13 +198,6 @@ fn test_receive_message() {
         );
         assert_ok!(Bridge::enable_path(RuntimeOrigin::signed(ALICE), 31337, src_anchor, dst_anchor));
         assert_ok!(Bridge::receive_message(RuntimeOrigin::signed(ALICE), mock_sig, message.encode()));
-
-        let message = MessageReceived {
-            uid: message.uid,
-            cross_type: message.cross_type,
-            src_anchor: message.src_anchor,
-            dst_anchor: message.dst_anchor,
-        };
         expect_event(bridge_event::MessageReceived {
             message
         });

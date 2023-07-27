@@ -24,21 +24,13 @@ pub mod pallet {
     const BRIDGE_PALLET_ID: PalletId = PalletId(*b"Thismodl");
 
     #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
-    pub struct MessageSent {
+    pub struct Message {
         pub uid: H256,
         pub cross_type: H256,
         pub src_anchor: H256,
         pub extra_fee: Vec<u8>,
         pub dst_anchor: H256,
         pub payload: Vec<u8>,
-    }
-
-    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
-    pub struct MessageReceived {
-        pub uid: H256,
-        pub cross_type: H256,
-        pub src_anchor: H256,
-        pub dst_anchor: H256,
     }
 
     #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
@@ -88,10 +80,10 @@ pub mod pallet {
             anchor: H256,
         },
         MessageSent {
-            message: MessageSent,
+            message: Message,
         },
         MessageReceived {
-            message: MessageReceived,
+            message: Message,
         }
     }
 
@@ -162,7 +154,7 @@ pub mod pallet {
             msg: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
-            let message = MessageSent::decode(&mut msg.as_slice())
+            let message = Message::decode(&mut msg.as_slice())
                 .map_err(|_| Error::<T>::MessageParseError)?;
             let info = AnchorAddrToInfo::<T>::get(&message.dst_anchor)
                 .ok_or(Error::<T>::AnchorAddressNotExist)?;
@@ -172,12 +164,6 @@ pub mod pallet {
             let (src_chain, dst_chain, _nonce) = Self::parse_uid(message.uid);
             ensure!(info.destinations.contains(&(src_chain, message.src_anchor)), Error::<T>::PathNotEnabled);
             ensure!(dst_chain == T::ThisChain::get(), Error::<T>::InvalidDstChain);
-            let message = MessageReceived {
-                uid: message.uid,
-                cross_type: message.cross_type,
-                src_anchor: message.src_anchor,
-                dst_anchor: message.dst_anchor,
-            };
             Self::deposit_event(Event::MessageReceived { message: message.clone() });
             T::ConsumerInterface::receive_op(&message)?;
             Ok(().into())
@@ -215,7 +201,7 @@ pub mod pallet {
             ) {
                 fail!(e)
             }
-            let message = MessageSent {
+            let message = Message {
                 uid,
                 cross_type: Self::cross_type_into_h256(cross_type),
                 src_anchor,
@@ -293,11 +279,11 @@ pub mod pallet {
 
     pub trait ConsumerInterface<T: Config> {
         fn send_op(
-            message: &MessageSent,
+            message: &Message,
         ) -> DispatchResultWithPostInfo;
 
         fn receive_op(
-            message: &MessageReceived,
+            message: &Message,
         ) -> DispatchResultWithPostInfo;
     }
 
