@@ -1632,6 +1632,7 @@ version = "0.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "impl-trait-for-tuples",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -1647,10 +1648,13 @@ version = "0.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "pallet-bridge",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
