@@ -96,6 +96,7 @@ impl pallet_bcmp::Config for Test {
     type PureMessage = PureMessage;
     type DefaultAdmin = DefaultAdmin;
     type Consumers = Consumer1<Test>;
+    type WeightInfo = pallet_bcmp::weight::BcmpWeight<Test>;
 }
 
 parameter_types! {
@@ -155,4 +156,3 @@ pub(crate) fn last_event() -> RuntimeEvent {
 pub(crate) fn expect_event<E: Into<RuntimeEvent>>(e: E) {
     assert_eq!(last_event(), e.into());
 }
-

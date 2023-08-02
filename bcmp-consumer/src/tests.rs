@@ -15,7 +15,7 @@ fn test_send_message() {
     new_test_ext().execute_with(|| {
         let dst_anchor = H256::from([1u8; 32]);
         // bcmp env
-        assert_ok!(Bcmp::set_whitelist_sudo(RuntimeOrigin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
         assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
         assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), SOURCE_ANCHOR, vec![1, 2, 3]));
         assert_ok!(Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, dst_anchor, SOURCE_ANCHOR));

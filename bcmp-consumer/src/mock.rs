@@ -96,6 +96,7 @@ impl pallet_bcmp::Config for Test {
     type PureMessage = PureMessage;
     type DefaultAdmin = DefaultAdmin;
     type Consumers = (Consumer1<Test>, BcmpConsumer);
+    type WeightInfo = pallet_bcmp::weight::BcmpWeight<Test>;
 }
 
 parameter_types! {

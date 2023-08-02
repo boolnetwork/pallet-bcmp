@@ -7,6 +7,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 pub mod fee;
+pub mod weight;
 
 pub use pallet::*;
 
@@ -23,7 +24,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::TypeInfo;
     use codec::{Decode, Encode};
-    use crate::fee::GasConfig;
+    use crate::{fee::GasConfig, weight::WeightInfo};
     use impl_trait_for_tuples::impl_for_tuples;
 
     pub type BalanceOf<T> =
@@ -40,13 +41,13 @@ pub mod pallet {
         pub uid: H256,
         /// Only support 'Bcmp::Config::PureMessage' constant.
         pub cross_type: H256,
-        /// Bind bcmp-bcmp-consumer by 'BcmpConsumer::Config::AnchorAddress' constant.
+        /// Bind bcmp-consumer by 'BcmpConsumer::Config::AnchorAddress' constant.
         pub src_anchor: H256,
         /// Unsupported yet, Default value is empty Vector.
         pub extra_fee: Vec<u8>,
         /// Destination anchor address for target chain.
         pub dst_anchor: H256,
-        /// Extra logic for bcmp-bcmp-consumer.
+        /// Extra logic for bcmp-consumer.
         pub payload: Vec<u8>,
     }
 
@@ -82,6 +83,8 @@ pub mod pallet {
         type DefaultAdmin: Get<Option<Self::AccountId>>;
         /// Consumers can instance for (Consumer1, Consumer2, ..).
         type Consumers: ConsumerLayer<Self>;
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -122,6 +125,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn get_dst_chain_fee_standard)]
     pub type ChainToGasConfig<T: Config> = StorageMap<_, Blake2_128Concat, u32, GasConfig, ValueQuery>;
+
+    /// Control send and receive message, default value is 'false'.
+    #[pallet::storage]
+    #[pallet::getter(fn is_paused)]
+    pub type IsPaused<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::type_value]
     pub fn DefaultWhiteList<T: Config>() -> Vec<T::AccountId> {
@@ -168,6 +176,7 @@ pub mod pallet {
         UnsupportedChainId,
         InsufficientFee,
         NeedAdmin,
+        IsPaused,
     }
 
     #[pallet::hooks]
@@ -175,32 +184,55 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Insert new account to target whitelist by root authority.
-        #[pallet::weight(0)]
+        /// Receive cross message from other chain.
+        /// Called by off-chain deliverer.
+        #[pallet::call_index(0)]
+        #[pallet::weight(T::WeightInfo::receive_message())]
         #[transactional]
-        pub fn set_whitelist_sudo(
+        pub fn receive_message(
             origin: OriginFor<T>,
-            role: Role,
-            account: T::AccountId,
+            cmt_sig: Vec<u8>,
+            msg: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            let mut list = WhiteList::<T>::get(&role);
-            ensure!(!list.contains(&account), Error::<T>::AccountAlreadyInWhiteList);
-            list.push(account);
-            WhiteList::<T>::insert(&role, list);
+            ensure_signed(origin)?;
+            ensure!(!IsPaused::<T>::get(), Error::<T>::IsPaused);
+            let message = Message::decode(&mut msg.as_slice())
+                .map_err(|_| Error::<T>::MessageParseError)?;
+            let info = AnchorAddrToInfo::<T>::get(&message.dst_anchor)
+                .ok_or(Error::<T>::AnchorAddressNotExist)?;
+            // verify cmt sig
+            Self::ed25519_verify(&info.cmt_pk, &msg, &cmt_sig)?;
+            let (src_chain, dst_chain, _nonce) = Self::parse_uid(&message.uid);
+            // check uid
+            ensure!(
+                !ChainToImportUid::<T>::get(&src_chain).contains(&message.uid),
+                Error::<T>::UidAlreadyExist
+            );
+            // check src_chain
+            ensure!(info.destinations.contains(&(src_chain, message.src_anchor)), Error::<T>::PathNotEnabled);
+            ensure!(dst_chain == ThisChainId::<T>::get(), Error::<T>::InvalidDstChain);
+            ChainToImportUid::<T>::mutate(&src_chain, |value| value.push(message.uid));
+            Self::deposit_event(Event::MessageReceived { message: message.clone() });
+            T::Consumers::match_consumer(&message.dst_anchor, &message)?;
             Ok(().into())
         }
 
         /// Insert new account to target whitelist by 'Role::Admin' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(1)]
+        #[pallet::weight(T::WeightInfo::set_whitelist())]
         #[transactional]
         pub fn set_whitelist(
             origin: OriginFor<T>,
             role: Role,
             account: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            ensure!(WhiteList::<T>::get(&Role::Admin).contains(&sender), Error::<T>::NeedAdmin);
+            if ensure_root(origin.clone()).is_err() {
+                let sender = ensure_signed(origin)?;
+                ensure!(
+                    WhiteList::<T>::get(&Role::Admin).contains(&sender),
+                    Error::<T>::NeedAdmin,
+                );
+            }
             let mut list = WhiteList::<T>::get(&role);
             ensure!(!list.contains(&account), Error::<T>::AccountAlreadyInWhiteList);
             list.push(account);
@@ -209,7 +241,8 @@ pub mod pallet {
         }
 
         /// Set current chain id by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(2)]
+        #[pallet::weight(T::WeightInfo::set_this_chain_id())]
         #[transactional]
         pub fn set_this_chain_id(
             origin: OriginFor<T>,
@@ -224,7 +257,8 @@ pub mod pallet {
         }
 
         /// Set supported destination chain id by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(3)]
+        #[pallet::weight(T::WeightInfo::set_chain_id())]
         #[transactional]
         pub fn set_chain_id(
             origin: OriginFor<T>,
@@ -239,9 +273,10 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Register anchor address with committee pubkey, anchor should from bcmp-consumer pallet constant.
+        /// Register anchor address with committee pubkey, anchor should from consumer pallet constant.
         /// Must called by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(4)]
+        #[pallet::weight(T::WeightInfo::register_anchor())]
         #[transactional]
         pub fn register_anchor(
             origin: OriginFor<T>,
@@ -262,7 +297,8 @@ pub mod pallet {
         }
 
         /// Extend destination chain id with anchor address.
-        #[pallet::weight(0)]
+        #[pallet::call_index(5)]
+        #[pallet::weight(T::WeightInfo::enable_path())]
         #[transactional]
         pub fn enable_path(
             origin: OriginFor<T>,
@@ -285,7 +321,8 @@ pub mod pallet {
         }
 
         /// Set 'GasConfig' for target chain by 'Role::Admin' or 'Role::FeeController' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(6)]
+        #[pallet::weight(T::WeightInfo::set_fee_config())]
         #[transactional]
         pub fn set_fee_config(
             origin: OriginFor<T>,
@@ -302,7 +339,8 @@ pub mod pallet {
 
         /// Transfer rewards from resource account to target account.
         /// Must called by 'Role::Admin' or 'Role::Receiver' authority.
-        #[pallet::weight(0)]
+        #[pallet::call_index(7)]
+        #[pallet::weight(T::WeightInfo::claim_rewards())]
         #[transactional]
         pub fn claim_rewards(
             origin: OriginFor<T>,
@@ -320,40 +358,29 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Receive cross message from other chain.
-        /// Called by off-chain deliverer.
-        #[pallet::weight(0)]
+        /// Control bcmp to send and receive message.
+        /// Require Root or Admin role.
+        #[pallet::call_index(8)]
+        #[pallet::weight(T::WeightInfo::emergency_control())]
         #[transactional]
-        pub fn receive_message(
+        pub fn emergency_control(
             origin: OriginFor<T>,
-            cmt_sig: Vec<u8>,
-            msg: Vec<u8>,
+            is_paused: bool,
         ) -> DispatchResultWithPostInfo {
-            ensure_signed(origin)?;
-            let message = Message::decode(&mut msg.as_slice())
-                .map_err(|_| Error::<T>::MessageParseError)?;
-            let info = AnchorAddrToInfo::<T>::get(&message.dst_anchor)
-                .ok_or(Error::<T>::AnchorAddressNotExist)?;
-            // verify cmt sig
-            Self::ed25519_verify(&info.cmt_pk, &msg, &cmt_sig)?;
-            let (src_chain, dst_chain, _nonce) = Self::parse_uid(&message.uid);
-            // check uid
-            ensure!(
-                !ChainToImportUid::<T>::get(&src_chain).contains(&message.uid),
-                Error::<T>::UidAlreadyExist
-            );
-            // check src_chain
-            ensure!(info.destinations.contains(&(src_chain, message.src_anchor)), Error::<T>::PathNotEnabled);
-            ensure!(dst_chain == ThisChainId::<T>::get(), Error::<T>::InvalidDstChain);
-            ChainToImportUid::<T>::mutate(&src_chain, |value| value.push(message.uid));
-            Self::deposit_event(Event::MessageReceived { message: message.clone() });
-            T::Consumers::match_consumer(&message.dst_anchor, &message)?;
+            if ensure_root(origin.clone()).is_err() {
+                let sender = ensure_signed(origin)?;
+                ensure!(
+                    WhiteList::<T>::get(&Role::Admin).contains(&sender),
+                    Error::<T>::AccountNotAtWhiteList
+                );
+            }
+            IsPaused::<T>::put(is_paused);
             Ok(().into())
         }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Called by bcmp-consumer pallet, source anchor must already be registered.
+        /// Called by consumer pallet, source anchor must already be registered.
         pub fn send_message(
             sender: T::AccountId,
             fee: BalanceOf<T>,
@@ -361,6 +388,7 @@ pub mod pallet {
             dst_chain: u32,
             payload: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
+            ensure!(!IsPaused::<T>::get(), Error::<T>::IsPaused);
             let info = AnchorAddrToInfo::<T>::get(&src_anchor)
                 .ok_or(Error::<T>::AnchorAddressNotExist)?;
             let (_, dst_anchor) = info.destinations
@@ -455,7 +483,7 @@ pub mod pallet {
         }
     }
 
-    /// Every bcmp-consumer pallet must implement this trait
+    /// Every consumer pallet must implement this trait
     pub trait ConsumerLayer<T: Config> {
         fn receive_op(
             message: &Message,
