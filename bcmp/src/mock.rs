@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use frame_support::dispatch::DispatchResultWithPostInfo;
-use crate as pallet_bridge;
+use crate as pallet_bcmp;
 use frame_support::parameter_types;
 use frame_support::sp_runtime::MultiSignature;
 use frame_support::sp_runtime::traits::{IdentifyAccount, Verify};
@@ -12,7 +12,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-pub use pallet_bridge::Event as bridge_event;
+pub use pallet_bcmp::Event as bridge_event;
 use crate::Message;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -25,6 +25,8 @@ pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
 pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
 pub const EVE: AccountId = AccountId32::new([5u8; 32]);
 pub const FALA: AccountId = AccountId32::new([6u8; 32]);
+pub const DEFAULT_ADMIN_LIST: Option<AccountId32> = Some(CHARLIE);
+
 pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 frame_support::construct_runtime!(
@@ -35,7 +37,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Bridge: pallet_bridge::{Pallet, Call, Storage, Event<T>},
+        Bcmp: pallet_bcmp::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -71,11 +73,6 @@ impl system::Config for Test {
     type MaxConsumers = ConstU32<16>;
 }
 
-parameter_types! {
-    pub const ThisChain: u32 = 31338;
-    pub const PureMessage: H256 = H256{0: [150u8, 108, 99, 209, 73, 57, 236, 154, 206, 45, 199, 68, 245, 234, 151, 14, 28, 198, 242, 15, 18, 175, 239, 220, 223, 245, 142, 213, 211, 33, 99, 126] };
-}
-
 pub struct Consumer1<T> (PhantomData<T>);
 
 impl crate::ConsumerLayer<Test> for Consumer1<Test> {
@@ -88,11 +85,16 @@ impl crate::ConsumerLayer<Test> for Consumer1<Test> {
     }
 }
 
-impl pallet_bridge::Config for Test {
+parameter_types! {
+    pub const PureMessage: H256 = crate::pallet::PURE_MESSAGE;
+    pub const DefaultAdmin: Option<AccountId> = DEFAULT_ADMIN_LIST;
+}
+
+impl pallet_bcmp::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
-    type ThisChain = ThisChain;
     type PureMessage = PureMessage;
+    type DefaultAdmin = DefaultAdmin;
     type Consumers = Consumer1<Test>;
 }
 

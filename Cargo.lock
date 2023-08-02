@@ -1627,7 +1627,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-bridge"
+name = "pallet-bcmp"
 version = "0.0.0"
 dependencies = [
  "frame-support",
@@ -1643,13 +1643,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-consumer"
+name = "pallet-bcmp-consumer"
 version = "0.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-bridge",
+ "pallet-bcmp",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

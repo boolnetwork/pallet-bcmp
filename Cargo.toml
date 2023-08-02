@@ -5,8 +5,8 @@ edition = "2021"
 
 [workspace]
 members = [
-    'bridge',
-    'consumer',
+    'bcmp',
+    'bcmp-consumer',
 ]
 
 [workspace.dependencies]
@@ -21,7 +21,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 impl-trait-for-tuples = "0.2.2"
 
 # local
-pallet-bridge = { path = "./bridge", default-features = false }
+pallet-bcmp = { path = "bcmp", default-features = false }
 
 # test
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }

@@ -1,6 +1,6 @@
 [package]
 authors.workspace = true
-name = "pallet-bridge"
+name = "pallet-bcmp-consumer"
 version = "0.0.0"
 edition.workspace = true
 
@@ -13,13 +13,13 @@ frame-support = { workspace = true }
 frame-system.workspace = true
 sp-std.workspace = true
 scale-info = { workspace = true, features = ["derive", "serde", "decode"] }
-sp-io = { workspace = true, features = ['disable_oom', 'disable_panic_handler'] }
+pallet-bcmp.workspace = true
 sp-core.workspace = true
-impl-trait-for-tuples.workspace = true
 
 [dev-dependencies]
 pallet-balances = { workspace = true, default-features = true }
 sp-runtime.workspace = true
+sp-io.workspace = true
 
 [features]
 default = ["std"]
@@ -28,6 +28,6 @@ std = [
     'frame-system/std',
     'codec/std',
     'sp-std/std',
-    'sp-io/std',
+    'pallet-bcmp/std',
     'sp-core/std',
 ]
