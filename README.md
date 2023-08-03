@@ -9,7 +9,7 @@ Base layer pallet which implement base features such as emitting `MessageSent` e
 Consumer pallet depends on pallet-bcmp and supports custom features.
 
 ## Steps to use Bcmp:
-### 1. Write custom consumer pallet. ie: [consumer-template](../bcmp-consumer).
+### 1. Write custom consumer pallet. ie: [consumer-template](./bcmp-consumer).
 #### Note:
 ##### a. Consumer pallet must depend on `pallet-bcmp` to emit `MessageSent` event and other receive message logic.
 ##### b. Consumer pallet must implement `ConsumerLayer` trait define at `pallet-bcmp`.
@@ -69,7 +69,7 @@ Consumer's `AnchorAddress` can generate by `keccak256(&b"PALLET_CONSUMER"))`.
 
 ### 5. Send cross-tx from you chain to another chain:
 * Call `send_message` at pallet-bcmp-consumer, it should call pallet-bcmp's `send_message` finally to emit `MessageSent` event.
-* `fee` parameter can calculate at [bcmp-fee-config](../bcmp/src/fee.rs).
+* `fee` parameter can calculate at [bcmp-fee-config](./bcmp/src/fee.rs).
 
 ### 6. Receive message from another chain:
 *  After deliverer call the `receive_message` at pallet-bcmp, it will call consumer pallet's `receive_op` at trait `ConsumerLayer` if dispatch `Message`'s element `dst_anchor` successfully.
