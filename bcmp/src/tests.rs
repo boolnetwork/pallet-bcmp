@@ -176,7 +176,7 @@ fn test_send_message() {
             uid: H256::from_str("0000000000007A69000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor,
             payload: vec![]
         };
@@ -206,7 +206,7 @@ fn test_receive_message() {
             uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor,
             payload: vec![]
         };

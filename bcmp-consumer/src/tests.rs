@@ -57,7 +57,7 @@ fn test_receive_message() {
             uid: H256::zero(),
             cross_type: H256{0: [150u8, 108, 99, 209, 73, 57, 236, 154, 206, 45, 199, 68, 245, 234, 151, 14, 28, 198, 242, 15, 18, 175, 239, 220, 223, 245, 142, 213, 211, 33, 99, 126] },
             src_anchor: H256::zero(),
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor: SOURCE_ANCHOR,
             payload: vec![],
         };

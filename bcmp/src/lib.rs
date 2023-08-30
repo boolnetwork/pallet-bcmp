@@ -44,7 +44,7 @@ pub mod pallet {
         /// Bind bcmp-consumer by 'BcmpConsumer::Config::AnchorAddress' constant.
         pub src_anchor: H256,
         /// Unsupported yet, Default value is empty Vector.
-        pub extra_fee: Vec<u8>,
+        pub extra_feed: Vec<u8>,
         /// Destination anchor address for target chain.
         pub dst_anchor: H256,
         /// Extra logic for bcmp-consumer.
@@ -421,7 +421,7 @@ pub mod pallet {
                 uid,
                 cross_type: T::PureMessage::get(),
                 src_anchor,
-                extra_fee: Default::default(),
+                extra_feed: Default::default(),
                 dst_anchor: dst_anchor.clone(),
                 payload
             };
