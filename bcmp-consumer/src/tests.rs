@@ -1,6 +1,6 @@
 use frame_support::{assert_noop, assert_ok};
 use frame_support::sp_runtime::Percent;
-use sp_core::{ByteArray, H256};
+use sp_core::H256;
 use pallet_bcmp::fee::GasConfig;
 use pallet_bcmp::{Message, Role};
 use crate::mock::*;
@@ -15,10 +15,10 @@ fn test_send_message() {
     new_test_ext().execute_with(|| {
         let dst_anchor = H256::from([1u8; 32]);
         // bcmp env
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
-        assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), SOURCE_ANCHOR, vec![1, 2, 3]));
-        assert_ok!(Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, dst_anchor, SOURCE_ANCHOR));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::register_anchor(Origin::signed(ALICE), SOURCE_ANCHOR, vec![1, 2, 3]));
+        assert_ok!(Bcmp::enable_path(Origin::signed(ALICE), 31337, dst_anchor, SOURCE_ANCHOR));
         let new_config = GasConfig {
             chain_id: 31337,
             gas_per_byte: 1,
@@ -27,11 +27,11 @@ fn test_send_message() {
             price_ratio: Percent::from_percent(10),
             protocol_ratio: Percent::from_percent(20),
         };
-        assert_ok!(Bcmp::set_fee_config(RuntimeOrigin::signed(ALICE), new_config));
+        assert_ok!(Bcmp::set_fee_config(Origin::signed(ALICE), new_config));
         let receiver = [0u8; 32].to_vec();
         assert_ok!(
             BcmpConsumer::send_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 500,
                 100,
                 31337,
@@ -47,7 +47,7 @@ fn test_send_message() {
 fn test_receive_message() {
     new_test_ext().execute_with(|| {
         // mock send
-        assert_ok!(Balances::transfer(RuntimeOrigin::signed(BOB), BcmpConsumer::resource_account(), 100));
+        assert_ok!(Balances::transfer(Origin::signed(BOB), BcmpConsumer::resource_account(), 100));
 
         let mut amount = 60u128.to_be_bytes().to_vec();
         let mut payload = [0u8; 16].to_vec();
@@ -57,7 +57,7 @@ fn test_receive_message() {
             uid: H256::zero(),
             cross_type: H256{0: [150u8, 108, 99, 209, 73, 57, 236, 154, 206, 45, 199, 68, 245, 234, 151, 14, 28, 198, 242, 15, 18, 175, 239, 220, 223, 245, 142, 213, 211, 33, 99, 126] },
             src_anchor: H256::zero(),
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor: SOURCE_ANCHOR,
             payload: vec![],
         };
@@ -73,7 +73,7 @@ fn test_receive_message() {
 #[test]
 fn test_payload_encode_and_decode() {
     new_test_ext().execute_with(|| {
-        let payload = BcmpConsumer::eth_api_encode(100, &ALICE.as_slice());
+        let payload = BcmpConsumer::eth_api_encode(100, &Into::<[u8; 32]>::into(ALICE));
         let expect_bytes = [0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ];
         assert_eq!(payload, expect_bytes.to_vec());
 

@@ -1,31 +1,10 @@
-[workspace.package]
-version = "0.0.0"
-authors = ["BoolNetwork"]
-edition = "2021"
-
 [workspace]
 members = [
     'bcmp',
     'bcmp-consumer',
 ]
 
-[workspace.dependencies]
-# substrate
-codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-scale-info = { version = "2.0", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-impl-trait-for-tuples = "0.2.2"
 
-# local
-pallet-bcmp = { path = "bcmp", default-features = false }
-
-# test
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 
 
 

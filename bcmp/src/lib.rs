@@ -1,4 +1,4 @@
-#![feature(tuple_trait)]
+// #![feature(tuple_trait)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unused_crate_dependencies)]
 
@@ -8,24 +8,24 @@ mod mock;
 mod tests;
 pub mod fee;
 pub mod weight;
-
 pub use pallet::*;
 
-#[frame_support::pallet(dev_mode)]
+#[frame_support::pallet]
 pub mod pallet {
+    use sp_std::convert::TryFrom;
     use sp_std::vec::Vec;
     use sp_std::vec;
     use sp_core::H256;
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, PalletId, transactional,
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional,
     };
     use frame_support::sp_runtime::traits::AccountIdConversion;
     use frame_support::traits::{Currency, ExistenceRequirement, LockableCurrency};
     use frame_system::pallet_prelude::*;
-    use scale_info::TypeInfo;
     use codec::{Decode, Encode};
     use crate::{fee::GasConfig, weight::WeightInfo};
     use impl_trait_for_tuples::impl_for_tuples;
+    use sp_runtime::ModuleId;
 
     pub type BalanceOf<T> =
     <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -33,9 +33,9 @@ pub mod pallet {
     /// Not allow change, get it from keccak256(&b"PURE_MESSAGE")): "0x966c63d14939ec9ace2dc744f5ea970e1cc6f20f12afefdcdff58ed5d321637e"
     pub const PURE_MESSAGE: H256 = H256{0: [150u8, 108, 99, 209, 73, 57, 236, 154, 206, 45, 199, 68, 245, 234, 151, 14, 28, 198, 242, 15, 18, 175, 239, 220, 223, 245, 142, 213, 211, 33, 99, 126] };
 
-    const FEE_COLLECTOR: PalletId = PalletId(*b"FCollect");
+    const FEE_COLLECTOR: ModuleId = ModuleId(*b"FCollect");
 
-    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
+    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode)]
     pub struct Message {
         /// UniqueIdentification, contains 'src_chain', 'dst_chain', 'none'.
         pub uid: H256,
@@ -44,14 +44,14 @@ pub mod pallet {
         /// Bind bcmp-consumer by 'BcmpConsumer::Config::AnchorAddress' constant.
         pub src_anchor: H256,
         /// Unsupported yet, Default value is empty Vector.
-        pub extra_fee: Vec<u8>,
+        pub extra_feed: Vec<u8>,
         /// Destination anchor address for target chain.
         pub dst_anchor: H256,
         /// Extra logic for bcmp-consumer.
         pub payload: Vec<u8>,
     }
 
-    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
+    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode)]
     pub struct AnchorInfo<AccountId> {
         /// Anchor creator.
         pub admin: AccountId,
@@ -61,7 +61,7 @@ pub mod pallet {
         pub destinations: Vec<(u32, H256)>,
     }
 
-    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, TypeInfo)]
+    #[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode)]
     pub enum Role {
         /// supreme authority.
         Admin,
@@ -75,7 +75,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
         #[pallet::constant]
         type PureMessage: Get<H256>;
@@ -85,10 +84,11 @@ pub mod pallet {
         type Consumers: ConsumerLayer<Self>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     /// Id represent this chain, ie 'sha2_256("Bool-Local".as_bytes())[..4]' to u32(big-endian).
@@ -141,7 +141,8 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::metadata(T::AccountId = "AccountId")]
+    #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         InitNewAnchor {
             creator: T::AccountId,
@@ -186,7 +187,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Receive cross message from other chain.
         /// Called by off-chain deliverer.
-        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::receive_message())]
         #[transactional]
         pub fn receive_message(
@@ -218,7 +218,6 @@ pub mod pallet {
         }
 
         /// Insert new account to target whitelist by 'Role::Admin' authority.
-        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::set_whitelist())]
         #[transactional]
         pub fn set_whitelist(
@@ -241,7 +240,6 @@ pub mod pallet {
         }
 
         /// Set current chain id by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::set_this_chain_id())]
         #[transactional]
         pub fn set_this_chain_id(
@@ -257,7 +255,6 @@ pub mod pallet {
         }
 
         /// Set supported destination chain id by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::set_chain_id())]
         #[transactional]
         pub fn set_chain_id(
@@ -275,7 +272,6 @@ pub mod pallet {
 
         /// Register anchor address with committee pubkey, anchor should from consumer pallet constant.
         /// Must called by 'Role::Admin' or 'Role::Operator' authority.
-        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::register_anchor())]
         #[transactional]
         pub fn register_anchor(
@@ -297,7 +293,6 @@ pub mod pallet {
         }
 
         /// Extend destination chain id with anchor address.
-        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::enable_path())]
         #[transactional]
         pub fn enable_path(
@@ -321,7 +316,6 @@ pub mod pallet {
         }
 
         /// Set 'GasConfig' for target chain by 'Role::Admin' or 'Role::FeeController' authority.
-        #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::set_fee_config())]
         #[transactional]
         pub fn set_fee_config(
@@ -339,7 +333,6 @@ pub mod pallet {
 
         /// Transfer rewards from resource account to target account.
         /// Must called by 'Role::Admin' or 'Role::Receiver' authority.
-        #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::claim_rewards())]
         #[transactional]
         pub fn claim_rewards(
@@ -360,7 +353,6 @@ pub mod pallet {
 
         /// Control bcmp to send and receive message.
         /// Require Root or Admin role.
-        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::emergency_control())]
         #[transactional]
         pub fn emergency_control(
@@ -421,7 +413,7 @@ pub mod pallet {
                 uid,
                 cross_type: T::PureMessage::get(),
                 src_anchor,
-                extra_fee: Default::default(),
+                extra_feed: Default::default(),
                 dst_anchor: dst_anchor.clone(),
                 payload
             };
@@ -471,7 +463,7 @@ pub mod pallet {
 
         /// Resource account to collect cross fee.
         pub(crate) fn fee_collector() -> T::AccountId {
-            FEE_COLLECTOR.into_account_truncating()
+            FEE_COLLECTOR.into_account()
         }
 
         pub(crate) fn role_check(role1: Role, role2: Role, sender: &T::AccountId) -> DispatchResultWithPostInfo {

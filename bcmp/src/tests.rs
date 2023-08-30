@@ -13,17 +13,17 @@ fn test_set_whitelist() {
     new_test_ext().execute_with(|| {
         assert_eq!(WhiteList::<Test>::get(Role::Admin).contains(&CHARLIE), true);
         // test sudo
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
         assert_noop!(
-            Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE),
+            Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE),
             Error::<Test>::AccountAlreadyInWhiteList,
         );
         assert_eq!(WhiteList::<Test>::get(Role::Admin).contains(&ALICE), true);
 
         // test admin
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::signed(ALICE), Role::Admin, BOB));
+        assert_ok!(Bcmp::set_whitelist(Origin::signed(ALICE), Role::Admin, BOB));
         assert_noop!(
-            Bcmp::set_whitelist(RuntimeOrigin::signed(ALICE), Role::Admin, BOB),
+            Bcmp::set_whitelist(Origin::signed(ALICE), Role::Admin, BOB),
             Error::<Test>::AccountAlreadyInWhiteList,
         );
         assert_eq!(WhiteList::<Test>::get(Role::Admin).contains(&BOB), true);
@@ -34,18 +34,18 @@ fn test_set_whitelist() {
 fn test_set_chain_id() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 0),
+            Bcmp::set_chain_id(Origin::signed(ALICE), 0),
             Error::<Test>::InvalidChainId,
         );
         assert_noop!(
-            Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337),
+            Bcmp::set_chain_id(Origin::signed(ALICE), 31337),
             Error::<Test>::AccountNotAtWhiteList,
         );
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
         assert_eq!(GlobalChainIds::<Test>::get().contains(&31337), true);
         assert_noop!(
-            Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337),
+            Bcmp::set_chain_id(Origin::signed(ALICE), 31337),
             Error::<Test>::ChainAlreadyExist,
         );
     })
@@ -55,17 +55,17 @@ fn test_set_chain_id() {
 fn test_register_anchor() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), H256::zero(), vec![1, 2, 3]),
+            Bcmp::register_anchor(Origin::signed(ALICE), H256::zero(), vec![1, 2, 3]),
             Error::<Test>::AccountNotAtWhiteList,
         );
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
-        assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), H256::zero(), vec![1, 2, 3]));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::register_anchor(Origin::signed(ALICE), H256::zero(), vec![1, 2, 3]));
         expect_event(bridge_event::InitNewAnchor {
             creator: ALICE,
             anchor: H256::zero()
         });
         assert_noop!(
-            Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), H256::zero(), vec![1, 2, 3]),
+            Bcmp::register_anchor(Origin::signed(ALICE), H256::zero(), vec![1, 2, 3]),
             Error::<Test>::AnchorAddressExist,
         );
         let expect_info = AnchorInfo {
@@ -80,23 +80,23 @@ fn test_register_anchor() {
 #[test]
 fn test_enable_path() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
         let anchor_addr = H256::zero();
-        assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), anchor_addr, vec![1, 2, 3]));
+        assert_ok!(Bcmp::register_anchor(Origin::signed(ALICE), anchor_addr, vec![1, 2, 3]));
         let dst_anchor = H256::random();
 
         assert_noop!(
-            Bcmp::enable_path(RuntimeOrigin::signed(BOB), 31337, dst_anchor, anchor_addr),
+            Bcmp::enable_path(Origin::signed(BOB), 31337, dst_anchor, anchor_addr),
             Error::<Test>::UnsupportedChainId,
         );
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
         assert_noop!(
-            Bcmp::enable_path(RuntimeOrigin::signed(BOB), 31337, dst_anchor, anchor_addr),
+            Bcmp::enable_path(Origin::signed(BOB), 31337, dst_anchor, anchor_addr),
             Error::<Test>::NotAnchorAdmin,
         );
-        assert_ok!(Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, dst_anchor, anchor_addr));
+        assert_ok!(Bcmp::enable_path(Origin::signed(ALICE), 31337, dst_anchor, anchor_addr));
         assert_noop!(
-            Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, dst_anchor, anchor_addr),
+            Bcmp::enable_path(Origin::signed(ALICE), 31337, dst_anchor, anchor_addr),
             Error::<Test>::PathAlreadyEnabled,
         );
         let expect_info = AnchorInfo {
@@ -120,16 +120,16 @@ fn test_set_fee_config() {
             protocol_ratio: Percent::from_percent(20),
         };
         assert_noop!(
-            Bcmp::set_fee_config(RuntimeOrigin::signed(ALICE), new_config.clone()),
+            Bcmp::set_fee_config(Origin::signed(ALICE), new_config.clone()),
             Error::<Test>::AccountNotAtWhiteList,
         );
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
         assert_noop!(
-            Bcmp::set_fee_config(RuntimeOrigin::signed(ALICE), new_config.clone()),
+            Bcmp::set_fee_config(Origin::signed(ALICE), new_config.clone()),
             Error::<Test>::UnsupportedChainId,
         );
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
-        assert_ok!(Bcmp::set_fee_config(RuntimeOrigin::signed(ALICE), new_config));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::set_fee_config(Origin::signed(ALICE), new_config));
         assert_eq!(ChainToGasConfig::<Test>::get(31337).price_ratio, Percent::from_percent(10));
     })
 }
@@ -148,8 +148,8 @@ fn test_send_message() {
             ),
             Error::<Test>::AnchorAddressNotExist,
         );
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
-        assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), src_anchor, vec![1, 2, 3]));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::register_anchor(Origin::signed(ALICE), src_anchor, vec![1, 2, 3]));
         assert_noop!(
             Bcmp::send_message(
                 ALICE,
@@ -161,8 +161,8 @@ fn test_send_message() {
             Error::<Test>::PathNotEnabled,
         );
         let dst_anchor = H256::random();
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
-        assert_ok!(Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, dst_anchor, src_anchor));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::enable_path(Origin::signed(ALICE), 31337, dst_anchor, src_anchor));
 
         assert_ok!(Bcmp::send_message(
             ALICE,
@@ -176,7 +176,7 @@ fn test_send_message() {
             uid: H256::from_str("0000000000007A69000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor,
             payload: vec![]
         };
@@ -189,7 +189,7 @@ fn test_send_message() {
         );
 
         // test claim rewards
-        assert_ok!(Bcmp::claim_rewards(RuntimeOrigin::signed(ALICE), 50, ALICE));
+        assert_ok!(Bcmp::claim_rewards(Origin::signed(ALICE), 50, ALICE));
         // 5000 - 100 + 50
         assert_eq!(Balances::free_balance(&ALICE), 4950);
     })
@@ -206,26 +206,26 @@ fn test_receive_message() {
             uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
-            extra_fee: vec![],
+            extra_feed: vec![],
             dst_anchor,
             payload: vec![]
         };
         // test bcmp status
-        assert_ok!(Bcmp::emergency_control(RuntimeOrigin::root(), true));
+        assert_ok!(Bcmp::emergency_control(Origin::root(), true));
         assert_eq!(IsPaused::<Test>::get(), true);
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 vec![],
                 vec![],
             ),
             Error::<Test>::IsPaused,
         );
 
-        assert_ok!(Bcmp::emergency_control(RuntimeOrigin::root(), false));
+        assert_ok!(Bcmp::emergency_control(Origin::root(), false));
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 vec![],
                 vec![],
             ),
@@ -233,18 +233,18 @@ fn test_receive_message() {
         );
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 vec![],
                 message.encode(),
             ),
             Error::<Test>::AnchorAddressNotExist,
         );
-        assert_ok!(Bcmp::set_whitelist(RuntimeOrigin::root(), Role::Admin, ALICE));
-        assert_ok!(Bcmp::register_anchor(RuntimeOrigin::signed(ALICE), dst_anchor, pk.clone()));
+        assert_ok!(Bcmp::set_whitelist(Origin::root(), Role::Admin, ALICE));
+        assert_ok!(Bcmp::register_anchor(Origin::signed(ALICE), dst_anchor, pk.clone()));
 
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 vec![],
                 message.encode(),
             ),
@@ -253,7 +253,7 @@ fn test_receive_message() {
 
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 [1u8; 64].to_vec(),
                 message.encode(),
             ),
@@ -264,26 +264,26 @@ fn test_receive_message() {
 
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 mock_sig.clone(),
                 message.encode(),
             ),
             Error::<Test>::PathNotEnabled,
         );
-        assert_ok!(Bcmp::set_chain_id(RuntimeOrigin::signed(ALICE), 31337));
-        assert_ok!(Bcmp::enable_path(RuntimeOrigin::signed(ALICE), 31337, src_anchor, dst_anchor));
+        assert_ok!(Bcmp::set_chain_id(Origin::signed(ALICE), 31337));
+        assert_ok!(Bcmp::enable_path(Origin::signed(ALICE), 31337, src_anchor, dst_anchor));
 
         let mock_anchor = H256::random();
         assert_ok!(<Consumer1<Test>>::match_consumer(&mock_anchor,&message));
 
         // match bcmp-consumer pallet successfully
-        assert_ok!(Bcmp::receive_message(RuntimeOrigin::signed(ALICE), mock_sig.clone(), message.encode()));
+        assert_ok!(Bcmp::receive_message(Origin::signed(ALICE), mock_sig.clone(), message.encode()));
         expect_event(bridge_event::MessageReceived {
             message: message.clone()
         });
         assert_noop!(
             Bcmp::receive_message(
-                RuntimeOrigin::signed(ALICE),
+                Origin::signed(ALICE),
                 mock_sig.clone(),
                 message.encode(),
             ),

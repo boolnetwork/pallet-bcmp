@@ -4,7 +4,6 @@ use crate as pallet_bcmp_consumer;
 use frame_support::parameter_types;
 use frame_support::sp_runtime::MultiSignature;
 use frame_support::sp_runtime::traits::{IdentifyAccount, Verify};
-use frame_support::traits::ConstU32;
 use frame_system as system;
 use sp_core::crypto::AccountId32;
 use sp_core::H256;
@@ -34,10 +33,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Bcmp: pallet_bcmp::{Pallet, Call, Storage, Event<T>},
-        BcmpConsumer: pallet_bcmp_consumer::{Pallet, Call, Storage, Event<T>},
+        System: frame_system::{Module, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        Bcmp: pallet_bcmp::{Module, Call, Storage, Event<T>},
+        BcmpConsumer: pallet_bcmp_consumer::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -51,8 +50,8 @@ impl system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type RuntimeOrigin = RuntimeOrigin;
-    type RuntimeCall = RuntimeCall;
+    type Origin = Origin;
+    type Call = Call;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -60,7 +59,7 @@ impl system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -69,8 +68,6 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type AccountData = pallet_balances::AccountData<Balance>;
-    type OnSetCode = ();
-    type MaxConsumers = ConstU32<16>;
 }
 
 pub struct Consumer1<T> (PhantomData<T>);
@@ -91,7 +88,7 @@ parameter_types! {
 }
 
 impl pallet_bcmp::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type Currency = Balances;
     type PureMessage = PureMessage;
     type DefaultAdmin = DefaultAdmin;
@@ -104,7 +101,7 @@ parameter_types! {
 }
 
 impl pallet_bcmp_consumer::Config for Test {
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type Currency = Balances;
     type AnchorAddress = AnchorAddress;
 }
@@ -116,21 +113,13 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-    type MaxLocks = ConstU32<50>;
-    type MaxReserves = ();
-    type ReserveIdentifier = [u8; 8];
-    /// The type for recording an account's balance.
+    type MaxLocks = MaxLocks;
     type Balance = Balance;
-    /// The ubiquitous event type.
-    type RuntimeEvent = RuntimeEvent;
+    type Event = Event;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
-    type FreezeIdentifier = ();
-    type MaxFreezes = ();
-    type HoldIdentifier = ();
-    type MaxHolds = ();
 }
 
 parameter_types! {

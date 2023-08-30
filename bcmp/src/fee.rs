@@ -1,10 +1,9 @@
 use frame_support::RuntimeDebug;
 use codec::{Encode, Decode};
-use scale_info::TypeInfo;
 use frame_support::sp_runtime::{Percent, SaturatedConversion};
 use crate::{BalanceOf, Config};
 
-#[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, Default, TypeInfo)]
+#[derive(RuntimeDebug, Clone, PartialEq, Encode, Decode, Default)]
 pub struct GasConfig {
     // dst chain id.
     pub chain_id: u32,

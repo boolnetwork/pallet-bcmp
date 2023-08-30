@@ -1,25 +1,25 @@
 [package]
-authors.workspace = true
+authors = ['BoolNetwork']
 name = "pallet-bcmp"
 version = "0.0.0"
-edition.workspace = true
+edition = "2018"
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-codec = { package = "parity-scale-codec", workspace = true, features = ["derive"] }
-frame-support = { workspace = true }
-frame-system.workspace = true
-sp-std.workspace = true
-scale-info = { workspace = true, features = ["derive", "serde", "decode"] }
-sp-io = { workspace = true, features = ['disable_oom', 'disable_panic_handler'] }
-sp-core.workspace = true
-impl-trait-for-tuples.workspace = true
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"]  }
+frame-support = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false }
+frame-system = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false }
+sp-std = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false }
+sp-runtime = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false }
+sp-io = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false, features = ['disable_oom', 'disable_panic_handler'] }
+sp-core = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4", default-features = false }
+impl-trait-for-tuples = "0.2.2"
 
 [dev-dependencies]
-pallet-balances = { workspace = true, default-features = true }
-sp-runtime.workspace = true
+pallet-balances = { git = "https://github.com/crustio/substrate", rev = "3971a18dd746ff5190d2d274cfcdaf7dae5f8ce4" }
+serde = { version = "1.0.101", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std"]
@@ -30,4 +30,5 @@ std = [
     'sp-std/std',
     'sp-io/std',
     'sp-core/std',
+    'sp-runtime/std',
 ]

@@ -8,25 +8,27 @@ mod tests;
 
 pub use pallet::*;
 
-#[frame_support::pallet(dev_mode)]
+#[frame_support::pallet]
 pub mod pallet {
+    use sp_std::convert::TryInto;
     use sp_std::vec::Vec;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, PalletId, transactional};
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional};
     use frame_support::dispatch::DispatchErrorWithPostInfo;
     use frame_support::sp_runtime::{SaturatedConversion, traits::AccountIdConversion};
     use sp_core::{H256, U256};
     use frame_support::traits::{Currency, ExistenceRequirement, LockableCurrency};
     use frame_system::pallet_prelude::*;
     use pallet_bcmp::Message;
+    use sp_runtime::ModuleId;
 
     pub type BalanceOf<T> =
     <<T as pallet_bcmp::Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    const RESOURCE_ACCOUNT: PalletId = PalletId(*b"ResrcAcc");
+    const RESOURCE_ACCOUNT: ModuleId = ModuleId(*b"ResrcAcc");
     const MAX_ACCOUNT_LENGTH: usize = 32;
     const AMOUNT_LENGTH: usize = 32;
 
-    #[derive(RuntimeDebug, Clone, Eq, PartialEq, Encode, Decode, TypeInfo)]
+    #[derive(RuntimeDebug, Clone, Eq, PartialEq, Encode, Decode)]
     pub struct Payload<T: Config> {
         pub amount: BalanceOf<T>,
         pub receiver: T::AccountId,
@@ -34,7 +36,7 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_bcmp::Config {
-        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
         /// Address represent this pallet, ie 'keccak256(&b"PALLET_CONSUMER"))'
         #[pallet::constant]
@@ -42,7 +44,7 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::without_storage_info]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::event]
@@ -94,7 +96,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Resource account to lock balance.
         pub(crate) fn resource_account() -> T::AccountId {
-            RESOURCE_ACCOUNT.into_account_truncating()
+            RESOURCE_ACCOUNT.into_account()
         }
 
         /// Example for parsing payload from Evm payload, contains 'amount' and 'receiver'.
@@ -103,12 +105,7 @@ pub mod pallet {
                 let amount: u128 = U256::from_big_endian(&raw[..32])
                     .try_into()
                     .map_err(|_| Error::<T>::BalanceConvertFailed)?;
-                // account id decode may different, ie. 'AccountId20', 'AccountId32', ..
-                let account_len = T::AccountId::max_encoded_len();
-                if account_len >= raw.len() {
-                    return Err(Error::<T>::AccountConvertFailed.into())
-                }
-                let receiver = T::AccountId::decode(&mut raw[raw.len() - account_len..].as_ref())
+                let receiver = T::AccountId::decode(&mut raw[32..].as_ref())
                     .map_err(|_| Error::<T>::AccountConvertFailed)?;
                 Ok(
                     Payload {
