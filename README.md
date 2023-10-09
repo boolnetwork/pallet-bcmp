@@ -65,7 +65,9 @@ Consumer's `AnchorAddress` can generate by `keccak256(&b"PALLET_CONSUMER"))`.
 *  Step2: Call `register_anchor` at pallet-bcmp.
 * * `anchor` is a constant at consumer's config.
 * * `cmt_pk` was generated at Step1.
-*  Step3: Call `enable_path` at pallet-bcmp to bind other chain's anchor and committee.
+*  Step3: Call `enable_path` at pallet-bcmp to bind other chain's anchor and committee. If the anchor address is not 32 bytes, you need to add 0 in front to satisfy 32 bytes. For example, if the anchor address is of type ETH and is `0x69f1041bd2afa94c996a6acbc966cba6e1dcb5ed`, then the actual input is `0x00000000000000000000000069f1041bd2afa94c996a6acbc966cba6e1dcb5ed`.
+
+
 
 ### 5. Send cross-tx from you chain to another chain:
 * Call `send_message` at pallet-bcmp-consumer, it should call pallet-bcmp's `send_message` finally to emit `MessageSent` event.
