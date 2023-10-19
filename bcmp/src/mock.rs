@@ -1,5 +1,5 @@
 use std::marker::PhantomData;
-use frame_support::dispatch::DispatchResultWithPostInfo;
+use frame_support::dispatch::{DispatchResultWithPostInfo, Pays, PostDispatchInfo};
 use crate as pallet_bcmp;
 use frame_support::parameter_types;
 use frame_support::sp_runtime::MultiSignature;
@@ -8,10 +8,7 @@ use frame_support::traits::ConstU32;
 use frame_system as system;
 use sp_core::crypto::AccountId32;
 use sp_core::H256;
-use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::{DispatchError, DispatchErrorWithPostInfo, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 pub use pallet_bcmp::Event as bridge_event;
 use crate::Message;
 
@@ -76,7 +73,16 @@ impl system::Config for Test {
 pub struct Consumer1<T> (PhantomData<T>);
 
 impl crate::ConsumerLayer<Test> for Consumer1<Test> {
-    fn receive_op(_message: &Message) -> DispatchResultWithPostInfo {
+    fn receive_op(message: &Message) -> DispatchResultWithPostInfo {
+        if message.extra_feed == vec![1, 1, 1] {
+            return Err(DispatchErrorWithPostInfo {
+                post_info: PostDispatchInfo {
+                    actual_weight: None,
+                    pays_fee: Pays::Yes,
+                },
+                error: DispatchError::Unavailable,
+            });
+        }
         Ok(().into())
     }
 
@@ -152,7 +158,19 @@ pub(crate) fn last_event() -> RuntimeEvent {
         .event
 }
 
+pub(crate) fn next_event() -> RuntimeEvent {
+    let mut events = system::Pallet::<Test>::events();
+    events.pop().expect("RuntimeEvent expected");
+    events.pop()
+        .expect("Next RuntimeEvent expected")
+        .event
+}
+
 //compare "e" with last event
 pub(crate) fn expect_event<E: Into<RuntimeEvent>>(e: E) {
     assert_eq!(last_event(), e.into());
+}
+
+pub(crate) fn expect_next_event<E: Into<RuntimeEvent>>(e: E) {
+    assert_eq!(next_event(), e.into());
 }

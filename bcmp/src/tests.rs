@@ -4,7 +4,7 @@ use crate::{AnchorAddrToInfo, AnchorInfo, ChainToExportNonce, ChainToGasConfig, 
 use crate::mock::*;
 use sp_core::{H256, Pair};
 use codec::Encode;
-use sp_runtime::Percent;
+use sp_runtime::{DispatchError, Percent};
 use crate::fee::GasConfig;
 use crate::pallet::ConsumerLayer;
 
@@ -202,7 +202,7 @@ fn test_receive_message() {
         let pk = cmt_pair.public().0.to_vec();
         let dst_anchor: H256 = H256::zero();
         let src_anchor = H256::random();
-        let message = Message {
+        let mut message = Message {
             uid: H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000").unwrap(),
             cross_type: <Test as crate::Config>::PureMessage::get(),
             src_anchor,
@@ -276,7 +276,26 @@ fn test_receive_message() {
         let mock_anchor = H256::random();
         assert_ok!(<Consumer1<Test>>::match_consumer(&mock_anchor,&message));
 
+        // test consumer receive op execute failed
+        message.extra_feed = vec![1, 1, 1];
+        let mock_sig_1 = cmt_pair.sign(&message.encode()).0.to_vec();
+        assert_ok!(Bcmp::receive_message(RuntimeOrigin::signed(ALICE), mock_sig_1.clone(), message.encode()));
+        expect_event(bridge_event::MessageReceived {
+            message: message.clone()
+        });
+        expect_next_event(bridge_event::MessageDeliverFailed {
+            uid: message.uid,
+            dst_anchor: message.dst_anchor,
+            error: DispatchError::Unavailable,
+        });
+        // uid is not insert
+        assert_eq!(
+            ChainToImportUid::<Test>::get(31337).contains(&H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000").unwrap()),
+            false,
+        );
+
         // match bcmp-consumer pallet successfully
+        message.extra_feed = vec![];
         assert_ok!(Bcmp::receive_message(RuntimeOrigin::signed(ALICE), mock_sig.clone(), message.encode()));
         expect_event(bridge_event::MessageReceived {
             message: message.clone()
@@ -292,7 +311,7 @@ fn test_receive_message() {
         assert_eq!(
             ChainToImportUid::<Test>::get(31337).contains(&H256::from_str("00007A6900000000000000000000000000000000000000000000000000000000").unwrap()),
             true,
-        )
+        );
     })
 }
 
