@@ -152,6 +152,11 @@ pub mod pallet {
         },
         MessageReceived {
             message: Message,
+        },
+        MessageDeliverFailed {
+            uid: H256,
+            dst_anchor: H256,
+            error: DispatchError,
         }
     }
 
@@ -211,9 +216,16 @@ pub mod pallet {
             // check src_chain
             ensure!(info.destinations.contains(&(src_chain, message.src_anchor)), Error::<T>::PathNotEnabled);
             ensure!(dst_chain == ThisChainId::<T>::get(), Error::<T>::InvalidDstChain);
-            ChainToImportUid::<T>::mutate(&src_chain, |value| value.push(message.uid));
+            match T::Consumers::match_consumer(&message.dst_anchor, &message) {
+                Ok(_) => ChainToImportUid::<T>::mutate(&src_chain, |value| value.push(message.uid)),
+                Err(e) =>
+                    Self::deposit_event(Event::MessageDeliverFailed {
+                        uid: message.uid,
+                        dst_anchor: message.dst_anchor,
+                        error: e.error
+                    }),
+            };
             Self::deposit_event(Event::MessageReceived { message: message.clone() });
-            T::Consumers::match_consumer(&message.dst_anchor, &message)?;
             Ok(().into())
         }
 
